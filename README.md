@@ -22,7 +22,7 @@
 
 ---
 
-# 1️⃣ Project Overview
+# Project Overview
 
 This project demonstrates the deployment of a Cloud Expense Tracker application using a fully automated CI/CD pipeline on AWS EC2. The application follows a two-tier architecture consisting of:
 
@@ -58,46 +58,238 @@ MySQL Container
 ↓
 Cloud Expense Tracker Running on AWS
 
+2.Backend (Spring Boot)
+Entity: Expense
+@Entity
+@Table(name = "expenses")
+public class Expense {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private String title;
+    private String category;
+    private double amount;
+    private String date;
+
+    public Expense() {}
+
+    public Expense(String title, String category,
+                   double amount, String date) {
+        this.title = title;
+        this.category = category;
+        this.amount = amount;
+        this.date = date;
+    }
+
+    // Getters and Setters
+}
+Repository
+@Repository
+public interface ExpenseRepository
+        extends JpaRepository<Expense, Long> {
+}
+Service
+@Service
+public class ExpenseService {
+
+    @Autowired
+    private ExpenseRepository repo;
+
+    public List<Expense> getAll() {
+        return repo.findAll();
+    }
+
+    public Expense save(Expense expense) {
+        return repo.save(expense);
+    }
+
+    public void delete(Long id) {
+        repo.deleteById(id);
+    }
+}
+Controller
+@RestController
+@RequestMapping("/api/expenses")
+@CrossOrigin("*")
+public class ExpenseController {
+
+    @Autowired
+    private ExpenseService service;
+
+    @GetMapping
+    public List<Expense> getAll() {
+        return service.getAll();
+    }
+
+    @PostMapping
+    public Expense save(
+            @RequestBody Expense expense) {
+        return service.save(expense);
+    }
+
+    @DeleteMapping("/{id}")
+    public void delete(
+            @PathVariable Long id) {
+        service.delete(id);
+    }
+}
+application.properties
+spring.datasource.url=jdbc:mysql://localhost:3306/expense_db
+spring.datasource.username=root
+spring.datasource.password=root
+
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+server.port=8080
+Frontend (React)
+
+Install:
+
+npm create vite@latest frontend -- --template react
+npm install axios react-router-dom
+API Call
+import axios from "axios";
+
+const API = "http://localhost:8080/api/expenses";
+
+export const getExpenses = () =>
+  axios.get(API);
+
+export const addExpense = (expense) =>
+  axios.post(API, expense);
+
+export const deleteExpense = (id) =>
+  axios.delete(`${API}/${id}`);
+Add Expense Component
+function AddExpense() {
+  const [title, setTitle] = useState("");
+  const [category, setCategory] = useState("");
+  const [amount, setAmount] = useState("");
+
+  const save = async () => {
+    await axios.post(
+      "http://localhost:8080/api/expenses",
+      {
+        title,
+        category,
+        amount,
+        date: new Date()
+      }
+    );
+    alert("Expense Added");
+  };
+
+  return (
+    <>
+      <input
+        placeholder="Title"
+        onChange={e =>
+          setTitle(e.target.value)}
+      />
+
+      <input
+        placeholder="Category"
+        onChange={e =>
+          setCategory(e.target.value)}
+      />
+
+      <input
+        placeholder="Amount"
+        onChange={e =>
+          setAmount(e.target.value)}
+      />
+
+      <button onClick={save}>
+        Add
+      </button>
+    </>
+  );
+}
+Dockerfile
+FROM openjdk:21
+COPY target/*.jar app.jar
+ENTRYPOINT ["java","-jar","/app.jar"]
+docker-compose.yml
+version: '3'
+
+services:
+  mysql:
+    image: mysql:8
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: expense_db
+    ports:
+      - "3306:3306"
+
+  app:
+    build: ./backend
+    ports:
+      - "8080:8080"
+    depends_on:
+      - mysql
+
 ---
+3. Prerequisites
 
-# 3️⃣ AWS EC2 Instance Preparation
+Install:
 
-### Instance Configuration
-
-OS: Ubuntu 22.04 LTS
+Git
+Docker
+Docker Compose
+Java 21
+Maven
+Jenkins
+AWS Account
+4. Step 1: Launch AWS EC2 Instance
+Create Instance
+OS: Ubuntu 22.04
 Instance Type: t2.micro
 Storage: 20 GB
+Security Group
+Port	Purpose
+22	SSH
+80	HTTP
+8080	Jenkins
+3000	React
+3306	MySQL
 
-### Security Groups
-
-SSH – 22
-HTTP – 80
-Jenkins – 8080
-React – 3000
-Spring Boot – 8081
-MySQL – 3306
-
-### Connect to EC2
+Connect:
 
 ssh -i key.pem ubuntu@<public-ip>
+5. Step 2: Install Dependencies
 
----
+Update server:
 
-# 4️⃣ Install Dependencies
+sudo apt update
+sudo apt upgrade -y
 
-sudo apt update && sudo apt upgrade -y
+Install Git:
 
-sudo apt install git docker.io docker-compose openjdk-21-jdk maven -y
+sudo apt install git -y
 
+Install Docker:
+
+sudo apt install docker.io -y
 sudo systemctl start docker
 sudo systemctl enable docker
 
+Install Docker Compose:
+
+sudo apt install docker-compose -y
+
+Add user:
+
 sudo usermod -aG docker ubuntu
 newgrp docker
+6. Step 3: Install Jenkins
 
----
+Install Java:
 
-# 5️⃣ Jenkins Installation and Setup
+sudo apt install openjdk-21-jdk -y
+
+Install Jenkins:
 
 curl -fsSL https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key | sudo tee /usr/share/keyrings/jenkins-keyring.asc
 
@@ -106,122 +298,105 @@ echo deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc] https://pkg.jenkins
 sudo apt update
 sudo apt install jenkins -y
 
+Start Jenkins:
+
 sudo systemctl start jenkins
 sudo systemctl enable jenkins
+
+Get password:
 
 sudo cat /var/lib/jenkins/secrets/initialAdminPassword
 
 Open:
 
 http://<ec2-ip>:8080
+7. Step 4: Configure GitHub Repository
 
----
-
-# 6️⃣ GitHub Repository Structure
+Repository Structure:
 
 Cloud-Expense-Tracker
 │
 ├── frontend
 ├── backend
-├── diagrams
-├── screenshots
 ├── docs
+├── screenshots
+├── .github/workflows
 ├── Dockerfile
 ├── docker-compose.yml
 ├── Jenkinsfile
 └── README.md
 
----
+Push code:
 
-# 7️⃣ Docker Configuration
-
-## Backend Dockerfile
-
+git init
+git add .
+git commit -m "Initial Commit"
+git remote add origin <repo-url>
+git push -u origin main
+8. Step 5: Dockerize Application
+Dockerfile
 FROM eclipse-temurin:21-jre
 COPY target/*.jar app.jar
 ENTRYPOINT ["java","-jar","/app.jar"]
-
-## docker-compose.yml
+docker-compose.yml
+version: '3'
 
 services:
+  mysql:
+    image: mysql:8
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: expense_db
 
-mysql:
-image: mysql:8
-environment:
-MYSQL_ROOT_PASSWORD: root
-MYSQL_DATABASE: expense_db
-
-backend:
-build: ./backend
-ports:
-
-* "8081:8081"
-  depends_on:
-* mysql
-
-frontend:
-build: ./frontend
-ports:
-
-* "3000:3000"
-
----
-
-# 8️⃣ Jenkins Pipeline
-
+  backend:
+    build: ./backend
+    ports:
+      - "8080:8080"
+    depends_on:
+      - mysql
+9. Step 6: Configure Jenkins Pipeline
+Jenkinsfile
 pipeline {
-agent any
+    agent any
 
-stages {
+    stages {
+        stage('Clone') {
+            steps {
+                git 'https://github.com/yourusername/Cloud-Expense-Tracker.git'
+            }
+        }
 
-stage('Clone') {
-steps {
-git 'https://github.com/yourusername/Cloud-Expense-Tracker.git'
-}
-}
+        stage('Build') {
+            steps {
+                sh 'docker compose build'
+            }
+        }
 
-stage('Build') {
-steps {
-sh 'docker compose build'
+        stage('Deploy') {
+            steps {
+                sh 'docker compose up -d'
+            }
+        }
+    }
 }
-}
+10. Step 7: Deploy Application
 
-stage('Deploy') {
-steps {
-sh 'docker compose up -d'
-}
-}
+Run:
 
-}
-}
+docker compose up -d
 
----
-
-# 9️⃣ Deployment Verification
+Check:
 
 docker ps
+11. Verify Deployment
 
 Application:
 
-Frontend:
-http://<ec2-ip>:3000
-
-Backend API:
-http://<ec2-ip>:8081
-
-Jenkins:
 http://<ec2-ip>:8080
 
----
+Jenkins:
 
-# 🔮 Future Enhancements
-
-• Kubernetes Deployment
-• Terraform Infrastructure Provisioning
-• SonarQube Code Quality Analysis
-• Prometheus & Grafana Monitoring
-• Docker Hub Integration
-• Blue-Green Deployment Strategy
+http://<ec2-ip>:8080
 
 ---
 
