@@ -1,27 +1,4 @@
 #  DevOps Project Report: Automated CI/CD Pipeline for Cloud Expense Tracker on AWS
-
-
-
----
-
-# Table of Contents
-
-1. Project Overview
-2. Architecture Diagram
-3. AWS EC2 Instance Preparation
-4. Install Dependencies on EC2
-5. Jenkins Installation and Setup
-6. GitHub Repository Configuration
-7. Docker Configuration
-8. Jenkins Pipeline Creation and Execution
-9. Deployment Verification
-10. Infrastructure Diagram
-11. Workflow Diagram
-12. Future Enhancements
-13. Conclusion
-
----
-
 # Project Overview
 
 This project demonstrates the deployment of a Cloud Expense Tracker application using a fully automated CI/CD pipeline on AWS EC2. The application follows a two-tier architecture consisting of:
